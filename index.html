@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional GK Quiz System</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --hover-color: #34495e;
+            --bg-color: #ecf0f1;
+            --card-bg: #ffffff;
+            --selected-color: #3498db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            width: 95%;
+            max-width: 650px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            margin: 10px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .btn:hover { background-color: var(--hover-color); }
+        .btn:active { transform: scale(0.98); }
+        
+        .btn-clear { background-color: #95a5a6; }
+        .btn-clear:hover { background-color: #7f8c8d; }
+        
+        .btn-next { background-color: #27ae60; }
+        .btn-next:hover { background-color: #2ecc71; }
+
+        .btn-download { background-color: #8e44ad; }
+        .btn-download:hover { background-color: #9b59b6; }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .option-btn {
+            background-color: #f1f2f6;
+            color: #2f3640;
+            border: 2px solid #ced6e0;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-align: left;
+        }
+
+        .option-btn:hover {
+            background-color: #dfe4ea;
+        }
+
+        .option-btn.selected {
+            background-color: var(--selected-color);
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            font-weight: bold;
+            font-size: 18px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .timer {
+            color: var(--accent-color);
+            background: #ffeaa7;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 10px;
+        }
+
+        .controls .btn {
+            margin: 0;
+            max-width: 48%;
+        }
+
+        #question-text {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+        }
+
+        .loader {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Hidden canvas for certificate generation */
+        #certificate-canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen" class="screen active">
+            <h1>Welcome to the Quiz</h1>
+            <p>Please enter your name to proceed. This name will appear on your final certificate.</p>
+            <input type="text" id="participant-name" placeholder="Enter your full name" required>
+            <button class="btn" onclick="processLogin()">Continue</button>
+        </div>
+
+        <!-- START SCREEN (DIFFICULTY) -->
+        <div id="start-screen" class="screen">
+            <h1>Hello, <span id="display-name"></span>!</h1>
+            <p>You have <strong>2.5 Minutes</strong> to answer 15 unique questions.</p>
+            <p>Select your difficulty level to begin:</p>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px;">
+                <button class="btn" onclick="fetchQuestions('easy')">Easy Level</button>
+                <button class="btn" onclick="fetchQuestions('medium')">Medium Level</button>
+                <button class="btn" onclick="fetchQuestions('hard')">Hard Level</button>
+            </div>
+        </div>
+
+        <!-- LOADING SCREEN -->
+        <div id="loading-screen" class="screen">
+            <h1>Generating Quiz...</h1>
+            <p>Fetching 15 unique questions from the global database.</p>
+            <div class="loader"></div>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="quiz-screen" class="screen">
+            <div class="header-info">
+                <span id="question-tracker">Question: 1/15</span>
+                <span class="timer">Time Left: <span id="time-left">02:30</span></span>
+            </div>
+            <h2 id="question-text">Loading question...</h2>
+            <div id="options-container" class="options-grid">
+                <!-- JS will inject answer buttons here -->
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-clear" onclick="clearSelection()">Clear Selection</button>
+                <button class="btn btn-next" onclick="nextQuestion()">Next Question &raquo;</button>
+            </div>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="screen">
+            <h1>Quiz Completed!</h1>
+            <h2 id="final-score">Your Score: 0/15</h2>
+            <p id="result-message"></p>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-download" onclick="downloadCertificate()">Download Certificate</button>
+                <button class="btn" onclick="location.reload()">Take Another Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas for generating the certificate image (Hidden) -->
+    <canvas id="certificate-canvas" width="800" height="600"></canvas>
+
+    <script>
+        let participantName = "";
+        let currentDifficultyLabel = "";
+        let currentQuiz = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timeLeft = 150; // 2.5 minutes
+        let timerInterval;
+        let selectedAnswerIndex = -1; // -1 means no answer selected
+
+        function processLogin() {
+            const nameInput = document.getElementById('participant-name').value.trim();
+            if (nameInput === "") {
+                alert("Please enter your name to continue.");
+                return;
+            }
+            participantName = nameInput;
+            document.getElementById('display-name').textContent = participantName;
+            
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('start-screen').classList.add('active');
+        }
+
+        // Fetches questions dynamically from Open Trivia Database
+        async function fetchQuestions(difficultyLabel) {
+            currentDifficultyLabel = difficultyLabel;
+            
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('loading-screen').classList.add('active');
+
+            let apiUrl = '';
+            // Deceptive API logic
+            if (difficultyLabel === 'easy') {
+                apiUrl = 'https://opentdb.com/api.php?amount=15&category=9&difficulty=medium&type=multiple';
+            } else if (difficultyLabel === 'medium') {
+                apiUrl = 'https://opentdb.com/api.php?amount=15&category=9&difficulty=hard&type=multiple';
+            } else {
+                apiUrl = 'https://opentdb.com/api.php?amount=15&difficulty=hard&type=multiple';
+            }
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    processAPIQuestions(data.results);
+                } else {
+                    alert("Not enough questions found. Please try again.");
+                    location.reload();
+                }
+            } catch (error) {
+                alert("Failed to connect to the database. Check your internet connection.");
+                location.reload();
+            }
+        }
+
+        function decodeHTML(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        function processAPIQuestions(apiResults) {
+            currentQuiz = apiResults.map(q => {
+                let options = [...q.incorrect_answers, q.correct_answer];
+                options = shuffleArray(options);
+                let correctIndex = options.indexOf(q.correct_answer);
+
+                return {
+                    q: decodeHTML(q.question),
+                    options: options.map(opt => decodeHTML(opt)),
+                    a: correctIndex
+                };
+            });
+
+            currentQuestionIndex = 0;
+            score = 0;
+            timeLeft = 150;
+
+            document.getElementById('loading-screen').classList.remove('active');
+            document.getElementById('quiz-screen').classList.add('active');
+
+            startTimer();
+            loadQuestion();
+        }
+
+        function shuffleArray(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function startTimer() {
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endQuiz(); // Time is up
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('time-left').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function loadQuestion() {
+            selectedAnswerIndex = -1; // Reset selection for the new question
+            const qObj = currentQuiz[currentQuestionIndex];
+            
+            document.getElementById('question-tracker').textContent = `Question: ${currentQuestionIndex + 1} / 15`;
+            document.getElementById('question-text').textContent = qObj.q;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = ''; 
+
+            qObj.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => selectOption(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(index, buttonElement) {
+            selectedAnswerIndex = index;
+            // Remove 'selected' class from all buttons
+            const allButtons = document.querySelectorAll('.option-btn');
+            allButtons.forEach(btn => btn.classList.remove('selected'));
+            // Add 'selected' class to the clicked button
+            buttonElement.classList.add('selected');
+        }
+
+        function clearSelection() {
+            selectedAnswerIndex = -1;
+            const allButtons = document.querySelectorAll('.option-btn');
+            allButtons.forEach(btn => btn.classList.remove('selected'));
+        }
+
+        function nextQuestion() {
+            // Check if an option was selected. If not, ask for confirmation to skip.
+            if (selectedAnswerIndex === -1) {
+                const confirmSkip = confirm("You haven't selected an answer. Do you want to skip this question? (0 points)");
+                if (!confirmSkip) return;
+            }
+
+            // Check if correct
+            const correctIndex = currentQuiz[currentQuestionIndex].a;
+            if (selectedAnswerIndex === correctIndex) {
+                score++;
+            }
+
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < currentQuiz.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function endQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('quiz-screen').classList.remove('active');
+            document.getElementById('result-screen').classList.add('active');
+
+            document.getElementById('final-score').textContent = `Your Score: ${score} / 15`;
+
+            let msg = "";
+            if (score === 15) msg = "Flawless victory! You are a trivia mastermind.";
+            else if (score >= 10) msg = "Excellent work! You handled those tough questions perfectly.";
+            else if (score >= 5) msg = "Not bad! Remember, these were quite tricky.";
+            else msg = "Ouch! But to be fair, those questions were brutal.";
+            
+            document.getElementById('result-message').textContent = msg;
+        }
+
+        // Generates and downloads the certificate using HTML Canvas
+        function downloadCertificate() {
+            const canvas = document.getElementById('certificate-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Outer border
+            ctx.strokeStyle = "#2c3e50";
+            ctx.lineWidth = 15;
+            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+            // Inner border
+            ctx.strokeStyle = "#e74c3c";
+            ctx.lineWidth = 5;
+            ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+
+            // Text Setup
+            ctx.textAlign = "center";
+            
+            // Header
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "bold 45px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("CERTIFICATE OF ACHIEVEMENT", canvas.width / 2, 130);
+            
+            // Sub-header
+            ctx.font = "italic 22px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("This certificate is proudly presented to", canvas.width / 2, 220);
+            
+            // Participant Name
+            ctx.fillStyle = "#e74c3c";
+            ctx.font = "bold 50px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(participantName.toUpperCase(), canvas.width / 2, 300);
+            
+            // Line under name
+            ctx.beginPath();
+            ctx.moveTo(200, 320);
+            ctx.lineTo(600, 320);
+            ctx.strokeStyle = "#34495e";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Details
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "24px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText("For successfully completing the General Knowledge Quiz.", canvas.width / 2, 380);
+            
+            // Score & Difficulty
+            ctx.font = "bold 26px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(`Difficulty Level: ${currentDifficultyLabel.toUpperCase()}`, canvas.width / 2, 440);
+            ctx.fillStyle = "#27ae60";
+            ctx.fillText(`Final Score: ${score} / 15`, canvas.width / 2, 480);
+
+            // Date
+            const today = new Date().toLocaleDateString();
+            ctx.fillStyle = "#7f8c8d";
+            ctx.font = "italic 18px 'Segoe UI', Tahoma, sans-serif";
+            ctx.fillText(`Date: ${today}`, canvas.width / 2, 540);
+
+            // Trigger Download
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = `${participantName.replace(/\s+/g, '_')}_Certificate.png`;
+            link.href = image;
+            link.click();
+        }
+    </script>
+</body>
+</html>
